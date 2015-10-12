@@ -113,7 +113,6 @@ while outputting a progress meter and supports resuming partial downloads.
 package update
 
 import (
-	"bitbucket.org/kardianos/osext"
 	"bytes"
 	"crypto"
 	"crypto/rsa"
@@ -122,12 +121,15 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/inconshreveable/go-update/download"
-	"github.com/kr/binarydist"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/kardianos/osext"
+	"github.com/kr/binarydist"
+	"gopkg.in/inconshreveable/go-update.v0/download"
 )
 
 // The type of a binary patch, if any. Only bsdiff is supported
@@ -153,6 +155,9 @@ type Update struct {
 
 	// signature to use for signature verification
 	Signature []byte
+
+	// configurable http client can be passed to download
+	HTTPClient *http.Client
 }
 
 func (u *Update) getPath() (string, error) {
@@ -251,7 +256,7 @@ func (u *Update) VerifySignatureWithPEM(publicKeyPEM []byte) (*Update, error) {
 // FromUrl updates the target with the contents of the given URL.
 func (u *Update) FromUrl(url string) (err error, errRecover error) {
 	target := new(download.MemoryTarget)
-	err = download.New(url, target).Get()
+	err = download.New(url, target, u.HTTPClient).Get()
 	if err != nil {
 		return
 	}
